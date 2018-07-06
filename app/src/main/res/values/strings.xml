@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">GeekTimeHelper</string>
+    <string name="description">自动下载极客时间订阅的课程音频</string>
 </resources>

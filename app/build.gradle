@@ -7,8 +7,8 @@ apply plugin: 'kotlin-android-extensions'
 android {
     compileSdkVersion 28
     defaultConfig {
-        applicationId "geektime.star.me.geektimehelper"
-        minSdkVersion 15
+        applicationId "me.star.geektime.geektimehelper"
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
