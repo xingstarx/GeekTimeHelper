@@ -40,7 +40,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     private fun goGeekTimeApp() {
+        if (isFinishing) {
+            return
+        }
         num--
         numView.text = "$num 秒后进入极客时间App"
         if (num == 0) {
