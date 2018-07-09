@@ -46,7 +46,7 @@ class GeekTimeAccessibilityService : AccessibilityService() {
                     if (titleList.isNotEmpty()) {
                         parsePresentActivity(list)
                     } else if (downloadList.isNotEmpty()) {
-                        downloadStep1()
+//                        downloadStep1()
                     } else {
                         parsePresentActivityDetail()
                     }
@@ -67,16 +67,17 @@ class GeekTimeAccessibilityService : AccessibilityService() {
 
 
     private fun goPresentActivity() {
-        val list: List<AccessibilityNodeInfo>? = rootInActiveWindow?.findAccessibilityNodeInfosByText("已购")
-        if (list?.isNotEmpty() == true) {
-            Log.e(TAG, "list?.isNotEmpty() == true")
-            val nodeInfo: AccessibilityNodeInfo  = list[0].parent
-            if (nodeInfo.className == "android.widget.FrameLayout") {
-                mHandler.postDelayed({
+        mHandler.postDelayed({
+            var list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("已购") ?: arrayListOf()
+            Log.e(TAG, "lgoPresentActivity() list.isNotEmpty() == " + list.isNotEmpty())
+            if (list.isNotEmpty()) {
+                Log.e(TAG, "list?.isNotEmpty() == true")
+                val nodeInfo: AccessibilityNodeInfo  = list[0].parent
+                if (nodeInfo.className == "android.widget.FrameLayout") {
                     nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }, 10000)
+                }
             }
-        }
+        }, 3000)
     }
 
     //解析已购产品页面,activity为PresentActivity
@@ -105,8 +106,8 @@ class GeekTimeAccessibilityService : AccessibilityService() {
     private fun parsePresentActivityDetail() {
         Log.e(TAG, "刚进入PresentActivity，title为图片，显示的是具体课程的课程详细列表")
         mHandler.postDelayed({
-            val list: List<AccessibilityNodeInfo>? = rootInActiveWindow?.findAccessibilityNodeInfosByText("听音频")
-            if (list?.get(0)?.parent != null) {
+            val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("听音频") ?: arrayListOf()
+            if (list.isNotEmpty() && list[0].parent != null) {
                 val nodeInfo: AccessibilityNodeInfo  = list[0].parent
                 if (nodeInfo.className == "android.widget.FrameLayout") {
                     nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -129,6 +130,15 @@ class GeekTimeAccessibilityService : AccessibilityService() {
                 }
             }, 3000)
         }
+    }
+
+    private fun downloadStep11() {
+        mHandler.postDelayed({
+            val contentList = rootInActiveWindow?.findAccessibilityNodeInfosByViewId("android:id/content") ?: arrayListOf()
+            val recyclerViewNodeInfo: AccessibilityNodeInfo = findRecyclerViewNodeInfo(contentList[0]) ?: return@postDelayed
+            recyclerViewNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            Thread.sleep(300)
+        }, 3000)
     }
 
     private fun downloadStep1() {
