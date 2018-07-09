@@ -13,6 +13,7 @@ import me.star.geektime.geektimehelper.utils.isAccessibilityServiceOn
 class MainActivity : AppCompatActivity() {
     val targetPackageName = "org.geekbang.geekTime"
     var num: Int = 3
+    private var isOnResume: Boolean = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -28,6 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        isOnResume = true
         val isOn = isAccessibilityServiceOn()
         if (isOn) {
             if (!isInstallApp(this, targetPackageName)) {
@@ -40,9 +42,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        isOnResume = false
+    }
 
     private fun goGeekTimeApp() {
         if (isFinishing) {
+            return
+        }
+        if (!isOnResume) {
             return
         }
         num--

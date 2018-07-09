@@ -9,7 +9,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import me.star.geektime.geektimehelper.utils.listToString
 
 class GeekTimeAccessibilityService : AccessibilityService() {
-    val TAG = "GeekTimeAccessibilityService"
+    val TAG = "GeekTimeService"
     private var mHandler: Handler = Handler(Looper.getMainLooper())
 
     override fun onInterrupt() {}
@@ -40,13 +40,16 @@ class GeekTimeAccessibilityService : AccessibilityService() {
                 } else if (className == "android.support.v7.widget.RecyclerView" || className == "android.view.View") {
 //                    goPresentActivity()
                 } else if (className == "org.geekbang.geekTime.view.activity.PresentActivity") {
+                    Log.e(TAG, "org.geekbang.geekTime.view.activity.PresentActivity invoked!")
+                    Thread.sleep(200)
                     val titleList: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("已购") ?: arrayListOf()
                     val list: List<AccessibilityNodeInfo>? = rootInActiveWindow?.findAccessibilityNodeInfosByViewId("android:id/content")
                     val downloadList: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("下载") ?: arrayListOf()
                     if (titleList.isNotEmpty()) {
                         parsePresentActivity(list)
                     } else if (downloadList.isNotEmpty()) {
-//                        downloadStep1()
+                        Log.e(TAG, "allSelectClicked() invoked!")
+                        allSelectClicked()
                     } else {
                         parsePresentActivityDetail()
                     }
@@ -99,7 +102,7 @@ class GeekTimeAccessibilityService : AccessibilityService() {
             Log.e(TAG, "刚进入PresentActivity，title为已购 222")
             val frameLayoutNodeInfo = recyclerViewNodeInfo.getChild(1)?.getChild(0)
             frameLayoutNodeInfo?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }, 10000)
+        }, 6000)
     }
 
     //选中PresentActivity的听音频按钮
@@ -132,31 +135,66 @@ class GeekTimeAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun downloadStep11() {
+    private fun scrollToBottom() {
         mHandler.postDelayed({
+            Log.e(TAG, "scrollToBottom()")
             val contentList = rootInActiveWindow?.findAccessibilityNodeInfosByViewId("android:id/content") ?: arrayListOf()
             val recyclerViewNodeInfo: AccessibilityNodeInfo = findRecyclerViewNodeInfo(contentList[0]) ?: return@postDelayed
-            recyclerViewNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-            Thread.sleep(300)
+            Log.e(TAG, "recyclerViewNodeInfo.childCount == " + recyclerViewNodeInfo.childCount)
+//            recyclerViewNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            scrollView(recyclerViewNodeInfo)
+            Thread.sleep(2000)
+            checkScroll()
         }, 3000)
     }
 
-    private fun downloadStep1() {
+    private fun scrollView(nodeInfo: AccessibilityNodeInfo?): Boolean {
+        if (nodeInfo == null) return false
+        if (nodeInfo.isScrollable) {
+            return nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+        }
+        for (index in 0..nodeInfo.childCount) {
+            if (scrollView(nodeInfo.getChild(index))) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun checkScroll() {
         mHandler.postDelayed({
+            Log.e(TAG, "checkScroll()")
             val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("全选") ?: arrayListOf()
             val allSelectNodeInfo: AccessibilityNodeInfo? = list.findLast { it.contentDescription.toString() == "全选" }
-            allSelectNodeInfo?.also {
+            if (allSelectNodeInfo?.isChecked == false) {
+                allSelectClicked()
+            } else {
+//                接着执行全部下载的操作
+                downloadInternal()
+            }
+        }, 3000)
+    }
+
+    //先全选，然后在进行滑动
+    private fun allSelectClicked() {
+        mHandler.postDelayed({
+            Log.e(TAG, "allSelectClicked()")
+            val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("全选") ?: arrayListOf()
+            val allSelectNodeInfo: AccessibilityNodeInfo? = list.findLast { it.contentDescription.toString() == "全选" }
+            allSelectNodeInfo?.let { allSelectNodeInfo ->
+                Log.e(TAG, "downloadStep1() , allSelectNodeInfo.isChecked == " + allSelectNodeInfo.isChecked)
                 if (allSelectNodeInfo.className == "android.view.View") {
                     allSelectNodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 }
+                Thread.sleep(300)
             }
-            //接着执行全部下载的操作
-            downloadStep2()
+            scrollToBottom()
         }, 3000)
     }
 
-    private fun downloadStep2() {
+    private fun downloadInternal() {
         mHandler.postDelayed({
+            Log.e(TAG, "downloadInternal()")
             val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("下载") ?: arrayListOf()
             val downloadNodeInfo: AccessibilityNodeInfo? = list.findLast { it.contentDescription.toString() == "下载" }
             downloadNodeInfo?.also {
