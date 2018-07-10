@@ -28,15 +28,7 @@ class GeekTimeAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {//32 2048
                 val className = event.className.toString()
                 if (className == "org.geekbang.geekTime.view.activity.MainActivity") {
-                    val list: List<AccessibilityNodeInfo>? = rootInActiveWindow?.findAccessibilityNodeInfosByText("我的")
-                    if (list?.get(0)?.parent != null) {
-                        val nodeInfo: AccessibilityNodeInfo  = list[0].parent
-                        if (nodeInfo.className == "android.widget.RelativeLayout") {
-                            mHandler.postDelayed({
-                                nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                            }, 10000)
-                        }
-                    }
+                    clickMeButton()
                 } else if (className == "android.support.v7.widget.RecyclerView" || className == "android.view.View") {
 //                    goPresentActivity()
                 } else if (className == "org.geekbang.geekTime.view.activity.PresentActivity") {
@@ -62,12 +54,28 @@ class GeekTimeAccessibilityService : AccessibilityService() {
                     goPatchDownloadPage()
                 }
             }
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                if (event.className.toString() == "android.support.v7.widget.RecyclerView") {
+                    Log.e(TAG, "RecyclerView scrolled invoked!")
+                }
+            }
 
         }
         rootInActiveWindow?.recycle()
     }
 
-
+    private fun clickMeButton() {
+        mHandler.postDelayed({
+            Log.e(TAG, "clickMeButton invoked!")
+            val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("我的") ?: arrayListOf()
+            if (list.isNotEmpty()) {
+                val nodeInfo: AccessibilityNodeInfo  = list[0].parent
+                if (nodeInfo.className == "android.widget.RelativeLayout") {
+                    nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+            }
+        }, 10000)
+    }
 
     private fun goPresentActivity() {
         mHandler.postDelayed({
@@ -107,8 +115,8 @@ class GeekTimeAccessibilityService : AccessibilityService() {
 
     //选中PresentActivity的听音频按钮
     private fun parsePresentActivityDetail() {
-        Log.e(TAG, "刚进入PresentActivity，title为图片，显示的是具体课程的课程详细列表")
         mHandler.postDelayed({
+            Log.e(TAG, "刚进入PresentActivity，title为图片，显示的是具体课程的课程详细列表")
             val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("听音频") ?: arrayListOf()
             if (list.isNotEmpty() && list[0].parent != null) {
                 val nodeInfo: AccessibilityNodeInfo  = list[0].parent
@@ -141,9 +149,9 @@ class GeekTimeAccessibilityService : AccessibilityService() {
             val contentList = rootInActiveWindow?.findAccessibilityNodeInfosByViewId("android:id/content") ?: arrayListOf()
             val recyclerViewNodeInfo: AccessibilityNodeInfo = findRecyclerViewNodeInfo(contentList[0]) ?: return@postDelayed
             Log.e(TAG, "recyclerViewNodeInfo.childCount == " + recyclerViewNodeInfo.childCount)
-//            recyclerViewNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            printNode(recyclerViewNodeInfo)
             scrollView(recyclerViewNodeInfo)
-            Thread.sleep(2000)
+            Thread.sleep(1000)
             checkScroll()
         }, 3000)
     }
@@ -166,13 +174,26 @@ class GeekTimeAccessibilityService : AccessibilityService() {
             Log.e(TAG, "checkScroll()")
             val list: List<AccessibilityNodeInfo> = rootInActiveWindow?.findAccessibilityNodeInfosByText("全选") ?: arrayListOf()
             val allSelectNodeInfo: AccessibilityNodeInfo? = list.findLast { it.contentDescription.toString() == "全选" }
-            if (allSelectNodeInfo?.isChecked == false) {
+            val checkBoxNodeInfo: AccessibilityNodeInfo? = allSelectNodeInfo?.parent?.getChild(4)
+            Log.e(TAG, "checkBoxNodeInfo, childCount == " + checkBoxNodeInfo?.childCount + ", toString==" + checkBoxNodeInfo.toString())
+//            if (allSelectNodeInfo?.isChecked == false) {
+//            printNode(allSelectNodeInfo?.parent)
+            if (checkBoxNodeInfo != null && checkBoxNodeInfo.className == "android.widget.FrameLayout" && checkBoxNodeInfo.childCount == 0) {
                 allSelectClicked()
-            } else {
+            } else if (checkBoxNodeInfo != null && checkBoxNodeInfo.className == "android.widget.FrameLayout" && checkBoxNodeInfo.childCount == 1) {
 //                接着执行全部下载的操作
                 downloadInternal()
             }
-        }, 3000)
+        }, 10000)
+    }
+
+    private fun printNode(rootNodeInfo: AccessibilityNodeInfo?) {
+        if (rootNodeInfo == null) {
+            return
+        }
+        for(index in 0..rootNodeInfo.childCount) {
+            Log.e(TAG, "printNode(), rootNodeInfo($index) == ${rootNodeInfo.getChild(index)}")
+        }
     }
 
     //先全选，然后在进行滑动
@@ -216,7 +237,7 @@ class GeekTimeAccessibilityService : AccessibilityService() {
         }
         for (index in 0 until rootNodeInfo.childCount) {
             val childNodeInfo = rootNodeInfo.getChild(index)
-            Log.e(TAG, "childNodeInfo == " + childNodeInfo + ", index == " + index)
+//            Log.e(TAG, "childNodeInfo == " + childNodeInfo + ", index == " + index)
             if (childNodeInfo.className == "android.support.v7.widget.RecyclerView") {
                 return childNodeInfo
             } else {
